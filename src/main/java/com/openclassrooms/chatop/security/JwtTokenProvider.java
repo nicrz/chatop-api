@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,18 +31,22 @@ public class JwtTokenProvider {
     private int jwtExpiration;
 
     public String generateToken(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpiration * 1000L);
-
-        Key key = Keys.secretKeyFor(SignatureAlgorithm.RS256);
-
-        return Jwts.builder()
-        .setSubject(userDetails.getUsername())
-        .setIssuedAt(now)
-        .setExpiration(expiryDate)
-        .signWith(key)
-        .compact();
+        Object principal = authentication.getPrincipal();
+    
+        if (principal instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) principal;
+            Date now = new Date();
+            Date expiryDate = new Date(now.getTime() + jwtExpiration * 1000L);
+        
+            return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(SignatureAlgorithm.HS256, jwtSecret)
+                .compact();
+        } else {
+            throw new IllegalArgumentException("Principal is not an instance of UserDetails");
+        }
     }
 
     public String getUsernameFromToken(String token) {
@@ -55,7 +60,7 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
+            Jwts.parserBuilder().setSigningKey(jwtSecret).build().parseClaimsJws(token);
             return true;
         } catch (Exception e) {
             return false;
@@ -77,11 +82,9 @@ public class JwtTokenProvider {
                 .getBody();
 
         String username = claims.getSubject();
-        List<String> roles = claims.get("roles", List.class);
 
-        Collection<? extends GrantedAuthority> authorities = roles.stream()
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
+        Collection<? extends GrantedAuthority> authorities = new HashSet<>();
+
 
         UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                 username, "", authorities);

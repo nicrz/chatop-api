@@ -12,5 +12,6 @@ import com.openclassrooms.chatop.model.User;
 public interface UserRepository extends CrudRepository<User, Integer> {
 
     User findByEmail(String email);
+    User findByName(String name);
 
 }
