@@ -1,5 +1,6 @@
 package com.openclassrooms.chatop.controller;
 
+import com.openclassrooms.chatop.model.LoginRequest;
 import com.openclassrooms.chatop.model.User;
 import com.openclassrooms.chatop.repository.UserRepository;
 import com.openclassrooms.chatop.service.UserService;
@@ -17,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -54,7 +56,10 @@ public class UserController {
   }
 
   @PostMapping("/auth/login")
-  public ResponseEntity<String> login(@RequestParam String email, @RequestParam String password) {
+  public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
+      String email = loginRequest.getEmail();
+      String password = loginRequest.getPassword();
+  
       // Vérification des informations d'identification de l'utilisateur
       Authentication authentication = authenticationProvider.authenticate(
               new UsernamePasswordAuthenticationToken(email, password)
