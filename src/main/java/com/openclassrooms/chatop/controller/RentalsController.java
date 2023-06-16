@@ -45,7 +45,7 @@ public class RentalsController {
   }
 
   @PostMapping(path = "/rentals")
-  public @ResponseBody Rentals createRental(@RequestParam String name,
+  public @ResponseBody ResponseEntity<String> createRental(@RequestParam String name,
                                             @RequestParam Integer surface,
                                             @RequestParam Integer price,
                                             @RequestParam String picture,
@@ -67,11 +67,13 @@ public class RentalsController {
       newRental.setCreated_at(now);
       newRental.setUpdated_at(now);
   
-      return rentalsRepository.save(newRental);
+      rentalsRepository.save(newRental);
+
+      return ResponseEntity.ok("Rental created successfully");
   }
 
   @PutMapping(path = "/rental/{id}")
-  public ResponseEntity<Rentals> updateRental(@PathVariable Integer id,
+  public ResponseEntity<String> updateRental(@PathVariable Integer id,
                                               @RequestParam(required = false) String name,
                                               @RequestParam(required = false) Integer surface,
                                               @RequestParam(required = false) Integer price,
@@ -114,9 +116,9 @@ public class RentalsController {
       rental.setUpdated_at(now);
 
       // Enregistre les modifications
-      Rentals updatedRental = rentalsRepository.save(rental);
+      rentalsRepository.save(rental);
 
-      return ResponseEntity.ok(updatedRental);
+      return ResponseEntity.ok("Rental updated successfully");
   }
 
 }
