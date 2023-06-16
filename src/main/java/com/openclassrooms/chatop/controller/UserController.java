@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -17,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -74,10 +76,10 @@ public class UserController {
 
   @GetMapping("/auth/me")
   public ResponseEntity<User> getUserInfo() {
-      // Récupére l'objet Authentication à partir du contexte de sécurité
+      // Récupère l'objet Authentication à partir du contexte de sécurité
       Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-      // Récupére le nom d'utilisateur de l'objet Authentication
+      // Récupère le nom d'utilisateur de l'objet Authentication
       String email = authentication.getName();
 
       // Recherche l'utilisateur dans votre repository par son nom d'utilisateur
@@ -87,10 +89,24 @@ public class UserController {
           // Renvoie les informations de l'utilisateur dans la réponse
           return ResponseEntity.ok(user);
       } else {
-          // Gére le cas où l'utilisateur n'est pas trouvé
+          // Gère le cas où l'utilisateur n'est pas trouvé
           return ResponseEntity.noContent().build();
       }
 
+  }
+
+  @GetMapping("/user/{id}")
+  public ResponseEntity<User> getUserById(@PathVariable Integer id) {
+      // Recherche l'utilisateur par son ID
+      Optional<User> optionalUser = userRepository.findById(id);
+  
+      if (optionalUser.isPresent()) {
+          // L'utilisateur existe, on renvoie les informations de l'utilisateur dans la réponse
+          return ResponseEntity.ok(optionalUser.get());
+      } else {
+          // Gère le cas où l'utilisateur n'est pas trouvé
+          return ResponseEntity.notFound().build();
+      }
   }
 
   @GetMapping(path="/all")
