@@ -18,6 +18,8 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
+import com.openclassrooms.chatop.exception.UnauthorizedException;
+import com.openclassrooms.chatop.exception.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
@@ -33,8 +35,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
-@Controller // This means that this class is a Controller
-@RequestMapping(path="/") // This means URL's start with /demo (after Application path)
+@Controller 
+@RequestMapping(path="/") 
 public class RentalsController {
   @Autowired
   private RentalsRepository rentalsRepository;
@@ -48,25 +50,47 @@ public class RentalsController {
   @Value("${file.upload-dir}")
   private String uploadDir;
 
-  @GetMapping(path="/rentals")
-  public @ResponseBody Iterable<Rentals> getAllRentals() {
-    // This returns a JSON or XML with the rentals
+  @GetMapping(path = "/rentals")
+  public @ResponseBody Iterable<Rentals> getAllRentals(Authentication authentication) {
+
+    // Vérifie si l'utilisateur est authentifié
+    if (authentication == null || !authentication.isAuthenticated()) {
+        throw new UnauthorizedException("Unauthorized");
+    }
+
+    // Renvoie toutes les locations
     return rentalsRepository.findAll();
   }
 
-  @GetMapping(path="/rental/{id}")
-  public @ResponseBody Optional<Rentals> getRental(@PathVariable Integer id) {
-    // This returns a JSON or XML with the rentals
-    return rentalsRepository.findById(id);
+  @GetMapping(path="/rentals/{id}")
+  public @ResponseBody Optional<Rentals> getRental(@PathVariable Integer id, Authentication authentication) {
+    // Vérifie si l'utilisateur est authentifié
+    if (authentication == null || !authentication.isAuthenticated()) {
+        throw new UnauthorizedException("Unauthorized");
+    }
+
+    // Récup la location par son ID
+    Optional<Rentals> rental = rentalsRepository.findById(id);
+
+    if (rental.isPresent()) {
+        return rental;
+    } else {
+        throw new NotFoundException("Rental not found");
+    }
   }
 
-  @PostMapping(path = "/rentals")
+  @PostMapping(path="/rentals")
   public @ResponseBody ResponseEntity<String> createRental(@RequestParam String name,
-                                          @RequestParam Integer surface,
-                                          @RequestParam Integer price,
-                                          @RequestParam MultipartFile picture,
-                                          @RequestParam String description,
-                                          Authentication authentication) {
+                                        @RequestParam Integer surface,
+                                        @RequestParam Integer price,
+                                        @RequestParam MultipartFile picture,
+                                        @RequestParam String description,
+                                        Authentication authentication) {
+      // Vérifie si l'utilisateur est authentifié
+      if (authentication == null || !authentication.isAuthenticated()) {
+          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+      }
+  
       if (picture != null && !picture.isEmpty()) {
           try {
               // Enregistre le fichier sur le serveur
@@ -84,7 +108,7 @@ public class RentalsController {
               newRental.setPrice(price);
               newRental.setPicture(pictureUrl);
               newRental.setDescription(description);
-              
+  
               // Récup l'ID de l'utilisateur authentifié
               String email = authentication.getName();
               User user = userRepository.findByEmail(email);
@@ -96,7 +120,7 @@ public class RentalsController {
               // Enregistre l'objet Rentals dans la base de données
               rentalsRepository.save(newRental);
   
-              return ResponseEntity.ok("Rental created successfully");
+              return ResponseEntity.ok("Rental created !");
           } catch (IOException e) {
               // Gère l'erreur de téléchargement du fichier
               e.printStackTrace();
@@ -107,32 +131,37 @@ public class RentalsController {
       }
   }
 
-  @PutMapping(path = "/rental/{id}")
+  @PutMapping(path="/rental/{id}")
   public ResponseEntity<String> updateRental(@PathVariable Integer id,
-                                              @RequestParam(required = false) String name,
-                                              @RequestParam(required = false) Integer surface,
-                                              @RequestParam(required = false) Integer price,
-                                              @RequestParam(required = false) String description,
-                                              Authentication authentication) {
+                                            @RequestParam(required = false) String name,
+                                            @RequestParam(required = false) Integer surface,
+                                            @RequestParam(required = false) Integer price,
+                                            @RequestParam(required = false) String description,
+                                            Authentication authentication) {
+      // Vérifie si l'utilisateur est authentifié
+      if (authentication == null || !authentication.isAuthenticated()) {
+          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+      }
+  
       // Vérifie si la location existe
       Optional<Rentals> rentalOptional = rentalsRepository.findById(id);
       if (rentalOptional.isEmpty()) {
           return ResponseEntity.notFound().build();
       }
-
+  
       // Récupère l'utilisateur authentifié
       String email = authentication.getName();
       User user = userRepository.findByEmail(email);
       Integer ownerId = user.getId();
-
+  
       Rentals rental = rentalOptional.get();
-
+  
       // Vérifie si l'utilisateur est le propriétaire de la location
       if (!rental.getOwner_id().equals(ownerId)) {
           return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
       }
-
-      // Met à jour les champs modifiables du rental
+  
+      // Met à jour les champs modifiables de la location
       if (name != null) {
           rental.setName(name);
       }
@@ -145,15 +174,15 @@ public class RentalsController {
       if (description != null) {
           rental.setDescription(description);
       }
-
-      // Met à jour la date de mise à jour
+  
+      // Modif la date de mise à jour
       Timestamp now = Timestamp.from(Instant.now());
       rental.setUpdated_at(now);
-
+  
       // Enregistre les modifications
       rentalsRepository.save(rental);
-
-      return ResponseEntity.ok("Rental updated successfully");
+  
+      return ResponseEntity.ok("Rental updated !");
   }
 
 }
