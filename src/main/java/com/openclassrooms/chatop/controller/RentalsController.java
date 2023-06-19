@@ -6,11 +6,20 @@ import com.openclassrooms.chatop.repository.RentalsRepository;
 import com.openclassrooms.chatop.repository.UserRepository;
 import com.openclassrooms.chatop.service.RentalsService;
 
+import org.springframework.beans.factory.annotation.Value;
+
+import java.io.File;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
+import java.nio.file.Path;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,6 +31,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 @Controller // This means that this class is a Controller
 @RequestMapping(path="/") // This means URL's start with /demo (after Application path)
@@ -31,6 +41,12 @@ public class RentalsController {
 
   @Autowired
   private UserRepository userRepository;
+
+  @Autowired
+  private ResourceLoader resourceLoader;
+
+  @Value("${file.upload-dir}")
+  private String uploadDir;
 
   @GetMapping(path="/rentals")
   public @ResponseBody Iterable<Rentals> getAllRentals() {
@@ -46,30 +62,49 @@ public class RentalsController {
 
   @PostMapping(path = "/rentals")
   public @ResponseBody ResponseEntity<String> createRental(@RequestParam String name,
-                                            @RequestParam Integer surface,
-                                            @RequestParam Integer price,
-                                            @RequestParam String picture,
-                                            @RequestParam String description,
-                                            Authentication authentication) {
-      Rentals newRental = new Rentals();
-      newRental.setName(name);
-      newRental.setSurface(surface);
-      newRental.setPrice(price);
-      newRental.setPicture(picture);
-      newRental.setDescription(description);
-      // Récup l'ID de l'utilisateur authentifié
-      String email = authentication.getName();
-      User user = userRepository.findByEmail(email);
-      Integer ownerId = user.getId();
-      newRental.setOwner_id(ownerId);
-
-      Timestamp now = Timestamp.from(Instant.now());
-      newRental.setCreated_at(now);
-      newRental.setUpdated_at(now);
+                                          @RequestParam Integer surface,
+                                          @RequestParam Integer price,
+                                          @RequestParam MultipartFile picture,
+                                          @RequestParam String description,
+                                          Authentication authentication) {
+      if (picture != null && !picture.isEmpty()) {
+          try {
+              // Enregistre le fichier sur le serveur
+              String fileName = UUID.randomUUID().toString() + "_" + picture.getOriginalFilename();
+              Path targetPath = Path.of(uploadDir, fileName);
+              Files.copy(picture.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
   
-      rentalsRepository.save(newRental);
-
-      return ResponseEntity.ok("Rental created successfully");
+              // Enregistre l'URL de l'image dans la base de données
+              String pictureUrl = "http://localhost:3000/files/media/" + fileName;
+  
+              // Crée un nouvel objet Rentals avec les autres propriétés
+              Rentals newRental = new Rentals();
+              newRental.setName(name);
+              newRental.setSurface(surface);
+              newRental.setPrice(price);
+              newRental.setPicture(pictureUrl);
+              newRental.setDescription(description);
+              
+              // Récup l'ID de l'utilisateur authentifié
+              String email = authentication.getName();
+              User user = userRepository.findByEmail(email);
+              Integer owner_id = user.getId();
+              newRental.setOwner_id(owner_id);
+              newRental.setCreated_at(new Timestamp(System.currentTimeMillis()));
+              newRental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
+  
+              // Enregistre l'objet Rentals dans la base de données
+              rentalsRepository.save(newRental);
+  
+              return ResponseEntity.ok("Rental created successfully");
+          } catch (IOException e) {
+              // Gère l'erreur de téléchargement du fichier
+              e.printStackTrace();
+              return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading picture");
+          }
+      } else {
+          return ResponseEntity.badRequest().body("No picture uploaded");
+      }
   }
 
   @PutMapping(path = "/rental/{id}")
