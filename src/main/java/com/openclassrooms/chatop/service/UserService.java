@@ -9,9 +9,13 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import com.openclassrooms.chatop.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import com.openclassrooms.chatop.model.User;
 
 @Service
+@RequiredArgsConstructor
 public class UserService implements UserDetailsService {
     
     @Autowired

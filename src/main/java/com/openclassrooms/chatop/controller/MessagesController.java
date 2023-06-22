@@ -25,6 +25,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @Controller
 @RequestMapping(path="/")
@@ -38,19 +44,13 @@ public class MessagesController {
   @Autowired
   private UserRepository userRepository;
 
-  @GetMapping(path="/messages")
-  public @ResponseBody Iterable<Messages> getAllMessages() {
-    // Retourne la liste de tous les messages
-    return messagesRepository.findAll();
-  }
-
-  @GetMapping(path="/message/{id}")
-  public @ResponseBody Optional<Messages> getMessage(@PathVariable Integer id) {
-    // Retourne un message en fonction de son id
-    return messagesRepository.findById(id);
-  }
-
   @PostMapping(path = "/messages")
+  @Operation(summary = "Create a new message")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "Message send with success"),
+      @ApiResponse(responseCode = "400", description = "Invalid request"),
+      @ApiResponse(responseCode = "401", description = "Unauthorized")
+  })
   public ResponseEntity<String> createMessage(@RequestParam Integer rentalId,
                                               @RequestParam String message,
                                               Authentication authentication) {

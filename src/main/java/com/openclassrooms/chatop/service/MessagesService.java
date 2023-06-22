@@ -4,6 +4,8 @@ import com.openclassrooms.chatop.model.Messages;
 import com.openclassrooms.chatop.repository.MessagesRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -13,6 +15,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MessagesService {
 
+    @Autowired
     private final MessagesRepository messagesRepository;
 
     @Transactional

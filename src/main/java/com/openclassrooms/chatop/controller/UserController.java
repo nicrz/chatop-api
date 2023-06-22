@@ -26,6 +26,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @Controller 
 @RequestMapping(path="/") 
@@ -43,6 +49,11 @@ public class UserController {
   private PasswordEncoder passwordEncoder;
 
   @PostMapping(path = "/auth/register")
+  @Operation(summary = "User registration")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "JWT Token"),
+      @ApiResponse(responseCode = "400", description = "Invalid request")
+  })
   public ResponseEntity<String> addNewUser(@RequestParam String name,
                                            @RequestParam String email,
                                            @RequestParam String password) {
@@ -63,6 +74,11 @@ public class UserController {
   }
 
   @PostMapping("/auth/login")
+  @Operation(summary = "User login")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "JWT Token"),
+      @ApiResponse(responseCode = "401", description = "Unauthorized")
+  })
   public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
       try {
           String email = loginRequest.getEmail();
@@ -85,6 +101,11 @@ public class UserController {
   }
 
   @GetMapping("/auth/me")
+  @Operation(summary = "Return informations about logged user")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class))),
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+  })
   public ResponseEntity<User> getUserInfo() {
       // Récupère l'objet Authentication
       Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -107,6 +128,11 @@ public class UserController {
   }
 
   @GetMapping("/user/{id}")
+  @Operation(summary = "Get user informations by ID")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class))),
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+  })
   public ResponseEntity<User> getUserById(@PathVariable Integer id) {
       // Récupère l'objet Authentication
       Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

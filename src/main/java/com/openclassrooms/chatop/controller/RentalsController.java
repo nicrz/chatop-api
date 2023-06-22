@@ -34,6 +34,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @Controller 
 @RequestMapping(path="/") 
@@ -47,10 +53,16 @@ public class RentalsController {
   @Autowired
   private ResourceLoader resourceLoader;
 
+  @Autowired
   @Value("${file.upload-dir}")
   private String uploadDir;
 
   @GetMapping(path = "/rentals")
+  @Operation(summary = "Show the list of all rentals")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Rentals.class))),
+    @ApiResponse(responseCode = "401", description = "Unauthorized")
+  })
   public @ResponseBody Iterable<Rentals> getAllRentals(Authentication authentication) {
 
     // Vérifie si l'utilisateur est authentifié
@@ -63,6 +75,11 @@ public class RentalsController {
   }
 
   @GetMapping(path="/rentals/{id}")
+  @Operation(summary = "Show a rental by ID")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Rentals.class))),
+      @ApiResponse(responseCode = "401", description = "Unauthorized")
+  })
   public @ResponseBody Optional<Rentals> getRental(@PathVariable Integer id, Authentication authentication) {
     // Vérifie si l'utilisateur est authentifié
     if (authentication == null || !authentication.isAuthenticated()) {
@@ -80,6 +97,11 @@ public class RentalsController {
   }
 
   @PostMapping(path="/rentals")
+  @Operation(summary = "Create a new rental")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "Rental created !"),
+      @ApiResponse(responseCode = "401", description = "Unauthorized")
+  })
   public @ResponseBody ResponseEntity<String> createRental(@RequestParam String name,
                                         @RequestParam Integer surface,
                                         @RequestParam Integer price,
@@ -132,6 +154,11 @@ public class RentalsController {
   }
 
   @PutMapping(path="/rental/{id}")
+  @Operation(summary = "Update rental")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "Rental updated !"),
+      @ApiResponse(responseCode = "401", description = "Unauthorized")
+  })
   public ResponseEntity<String> updateRental(@PathVariable Integer id,
                                             @RequestParam(required = false) String name,
                                             @RequestParam(required = false) Integer surface,
