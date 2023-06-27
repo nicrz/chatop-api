@@ -1,6 +1,7 @@
 package com.openclassrooms.chatop.controller;
 
 import com.openclassrooms.chatop.model.LoginRequest;
+import com.openclassrooms.chatop.model.RegistrationRequest;
 import com.openclassrooms.chatop.model.User;
 import com.openclassrooms.chatop.repository.UserRepository;
 import com.openclassrooms.chatop.service.UserService;
@@ -54,24 +55,40 @@ public class UserController {
       @ApiResponse(responseCode = "200", description = "JWT Token"),
       @ApiResponse(responseCode = "400", description = "Invalid request")
   })
-  public ResponseEntity<String> addNewUser(@RequestParam String name,
-                                           @RequestParam String email,
-                                           @RequestParam String password) {
+  public ResponseEntity<String> addNewUser(@RequestBody RegistrationRequest registrationRequest) {
       try {
-          User u = new User();
-          u.setName(name);
-          u.setEmail(email);
-          u.setPassword(passwordEncoder.encode(password));
+          // Récupère les paramètres de la demande d'inscription
+          String name = registrationRequest.getName();
+          String email = registrationRequest.getEmail();
+          String password = registrationRequest.getPassword();
+          
+          // Crée un nouvel utilisateur
+          User user = new User();
+          user.setName(name);
+          user.setEmail(email);
+          user.setPassword(passwordEncoder.encode(password));
           Timestamp now = Timestamp.from(Instant.now());
-          u.setCreated_at(now);
-          u.setUpdated_at(now);
-          userRepository.save(u);
-          return ResponseEntity.ok("Compte enregistré avec succès");
+          user.setCreated_at(now);
+          user.setUpdated_at(now);
+          userRepository.save(user);
+  
+          // Authentifie l'utilisateur après son enregistrement
+          Authentication authentication = authenticationProvider.authenticate(
+              new UsernamePasswordAuthenticationToken(email, password)
+          );
+          SecurityContextHolder.getContext().setAuthentication(authentication);
+  
+          // Génère le token JWT
+          String token = jwtTokenProvider.generateToken(authentication);
+  
+          // Retourne le token JWT dans la réponse
+          return ResponseEntity.ok(token);
       } catch (Exception e) {
           // Retourne une réponse 400 s'il y a une erreur lors de l'ajout
           return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
       }
   }
+  
 
   @PostMapping("/auth/login")
   @Operation(summary = "User login")
