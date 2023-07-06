@@ -1,6 +1,8 @@
 package com.openclassrooms.chatop.controller;
 
+import com.openclassrooms.chatop.model.RentalResponse;
 import com.openclassrooms.chatop.model.Rentals;
+import com.openclassrooms.chatop.model.RentalsResponse;
 import com.openclassrooms.chatop.model.User;
 import com.openclassrooms.chatop.repository.RentalsRepository;
 import com.openclassrooms.chatop.repository.UserRepository;
@@ -12,9 +14,12 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
@@ -53,25 +58,31 @@ public class RentalsController {
   @Autowired
   private ResourceLoader resourceLoader;
 
-  @Autowired
-  @Value("${file.upload-dir}")
-  private String uploadDir;
-
   @GetMapping(path = "/rentals")
   @Operation(summary = "Show the list of all rentals")
   @ApiResponses(value = {
     @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Rentals.class))),
     @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
-  public @ResponseBody Iterable<Rentals> getAllRentals(Authentication authentication) {
+  public ResponseEntity<RentalsResponse> getAllRentals(Authentication authentication) {
 
     // Vérifie si l'utilisateur est authentifié
     if (authentication == null || !authentication.isAuthenticated()) {
         throw new UnauthorizedException("Unauthorized");
     }
 
-    // Renvoie toutes les locations
-    return rentalsRepository.findAll();
+    // Récupère toutes les locations
+    Iterable<Rentals> rentalsIterable = rentalsRepository.findAll();
+
+    // Convertit l'itérable en liste
+    List<Rentals> rentalsList = new ArrayList<>();
+    rentalsIterable.forEach(rentalsList::add);
+
+    // Crée l'objet RentalsResponse contenant les locations
+    RentalsResponse rentalsResponse = new RentalsResponse(rentalsList);
+
+    // Retourne l'objet RentalsResponse dans la réponse
+    return ResponseEntity.ok(rentalsResponse);
   }
 
   @GetMapping(path="/rentals/{id}")
@@ -102,7 +113,7 @@ public class RentalsController {
       @ApiResponse(responseCode = "200", description = "Rental created !"),
       @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
-  public @ResponseBody ResponseEntity<String> createRental(@RequestParam String name,
+  public @ResponseBody ResponseEntity<RentalResponse> createRental(@RequestParam String name,
                                         @RequestParam Integer surface,
                                         @RequestParam Integer price,
                                         @RequestParam MultipartFile picture,
@@ -110,25 +121,30 @@ public class RentalsController {
                                         Authentication authentication) {
       // Vérifie si l'utilisateur est authentifié
       if (authentication == null || !authentication.isAuthenticated()) {
-          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
       }
   
       if (picture != null && !picture.isEmpty()) {
           try {
-              // Enregistre le fichier sur le serveur
-              String fileName = UUID.randomUUID().toString() + "_" + picture.getOriginalFilename();
-              Path targetPath = Path.of(uploadDir, fileName);
-              Files.copy(picture.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-  
-              // Enregistre l'URL de l'image dans la base de données
-              String pictureUrl = "http://localhost:3000/files/media/" + fileName;
+              // Définit le dossier où le fichier sera stocké
+              String fileDirectory = System.getProperty("user.dir") + "/src/main/resources/static/images/";
+
+              // Crée le chemin d'accès complet pour le fichier
+              String fileName = picture.getOriginalFilename();
+              Path destination = Paths.get(fileDirectory + fileName);
+
+              // Copie le fichier vers le répertoire de destination
+              Files.copy(picture.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
+
+              // Génère l'URL complet pour accéder au fichier
+              String fileUrl = "http://localhost:3000/images/" + fileName;
   
               // Crée un nouvel objet Rentals avec les autres propriétés
               Rentals newRental = new Rentals();
               newRental.setName(name);
               newRental.setSurface(surface);
               newRental.setPrice(price);
-              newRental.setPicture(pictureUrl);
+              newRental.setPicture(fileUrl);
               newRental.setDescription(description);
   
               // Récup l'ID de l'utilisateur authentifié
@@ -142,24 +158,28 @@ public class RentalsController {
               // Enregistre l'objet Rentals dans la base de données
               rentalsRepository.save(newRental);
   
-              return ResponseEntity.ok("Rental created !");
+             // Crée un objet RentalResponse avec le message approprié
+             RentalResponse rentalResponse = new RentalResponse("Rental created !");
+
+             // Retourne l'objet RentalResponse dans la réponse
+             return ResponseEntity.ok(rentalResponse);
           } catch (IOException e) {
               // Gère l'erreur de téléchargement du fichier
               e.printStackTrace();
-              return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error uploading picture");
+              return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
           }
       } else {
-          return ResponseEntity.badRequest().body("No picture uploaded");
+        return ResponseEntity.badRequest().body(null);
       }
   }
 
-  @PutMapping(path="/rental/{id}")
+  @PutMapping(path="/rentals/{id}")
   @Operation(summary = "Update rental")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Rental updated !"),
       @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
-  public ResponseEntity<String> updateRental(@PathVariable Integer id,
+  public ResponseEntity<RentalResponse> updateRental(@PathVariable Integer id,
                                             @RequestParam(required = false) String name,
                                             @RequestParam(required = false) Integer surface,
                                             @RequestParam(required = false) Integer price,
@@ -167,7 +187,7 @@ public class RentalsController {
                                             Authentication authentication) {
       // Vérifie si l'utilisateur est authentifié
       if (authentication == null || !authentication.isAuthenticated()) {
-          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
       }
   
       // Vérifie si la location existe
@@ -209,7 +229,11 @@ public class RentalsController {
       // Enregistre les modifications
       rentalsRepository.save(rental);
   
-      return ResponseEntity.ok("Rental updated !");
+     // Crée un objet RentalResponse avec le message approprié
+     RentalResponse rentalResponse = new RentalResponse("Rental updated !");
+
+     // Retourne l'objet RentalResponse dans la réponse
+     return ResponseEntity.ok(rentalResponse);
   }
 
 }

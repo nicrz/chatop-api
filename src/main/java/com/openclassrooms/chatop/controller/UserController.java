@@ -1,5 +1,6 @@
 package com.openclassrooms.chatop.controller;
 
+import com.openclassrooms.chatop.model.AuthSuccess;
 import com.openclassrooms.chatop.model.LoginRequest;
 import com.openclassrooms.chatop.model.RegistrationRequest;
 import com.openclassrooms.chatop.model.User;
@@ -55,7 +56,7 @@ public class UserController {
       @ApiResponse(responseCode = "200", description = "JWT Token"),
       @ApiResponse(responseCode = "400", description = "Invalid request")
   })
-  public ResponseEntity<String> addNewUser(@RequestBody RegistrationRequest registrationRequest) {
+  public ResponseEntity<AuthSuccess> addNewUser(@RequestBody RegistrationRequest registrationRequest) {
       try {
           // Récupère les paramètres de la demande d'inscription
           String name = registrationRequest.getName();
@@ -81,8 +82,11 @@ public class UserController {
           // Génère le token JWT
           String token = jwtTokenProvider.generateToken(authentication);
   
-          // Retourne le token JWT dans la réponse
-          return ResponseEntity.ok(token);
+          // Création de l'objet AuthSuccess avec le token
+          AuthSuccess authSuccess = new AuthSuccess(token);
+
+          // Retourne l'objet AuthSuccess dans la réponse
+          return ResponseEntity.ok(authSuccess);
       } catch (Exception e) {
           // Retourne une réponse 400 s'il y a une erreur lors de l'ajout
           return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -96,7 +100,7 @@ public class UserController {
       @ApiResponse(responseCode = "200", description = "JWT Token"),
       @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
-  public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
+  public ResponseEntity<AuthSuccess> login(@RequestBody LoginRequest loginRequest) {
       try {
           String email = loginRequest.getEmail();
           String password = loginRequest.getPassword();
@@ -109,8 +113,11 @@ public class UserController {
           // Génération du token
           String token = jwtTokenProvider.generateToken(authentication);
   
-          // Retourne le token JWT dans la réponse
-          return ResponseEntity.ok(token);
+        // Création de l'objet AuthSuccess avec le token
+        AuthSuccess authSuccess = new AuthSuccess(token);
+
+        // Retourne l'objet AuthSuccess dans la réponse
+        return ResponseEntity.ok(authSuccess);
       } catch (AuthenticationException e) {
           // Retourne une réponse 401 Unauthorized en cas d'erreur
           return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
