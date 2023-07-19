@@ -1,4 +1,4 @@
-package com.openclassrooms.chatop.model;
+package com.openclassrooms.dto;
 
 public class MessageRequest {
     private Integer rental_id;

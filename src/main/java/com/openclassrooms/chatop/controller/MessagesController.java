@@ -2,15 +2,16 @@ package com.openclassrooms.chatop.controller;
 
 import com.openclassrooms.chatop.exception.NotFoundException;
 import com.openclassrooms.chatop.exception.UnauthorizedException;
-import com.openclassrooms.chatop.model.MessageRequest;
-import com.openclassrooms.chatop.model.MessageResponse;
 import com.openclassrooms.chatop.model.Messages;
 import com.openclassrooms.chatop.model.Rentals;
 import com.openclassrooms.chatop.model.User;
 import com.openclassrooms.chatop.repository.MessagesRepository;
 import com.openclassrooms.chatop.repository.RentalsRepository;
 import com.openclassrooms.chatop.repository.UserRepository;
+import com.openclassrooms.chatop.responses.MessageResponse;
+import com.openclassrooms.chatop.service.MessagesService;
 import com.openclassrooms.chatop.service.RentalsService;
+import com.openclassrooms.dto.MessageRequest;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -41,6 +42,13 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Controller
 @RequestMapping(path="/")
 public class MessagesController {
+
+  private final MessagesService messagesService;
+
+  public MessagesController(MessagesService messagesService) {
+      this.messagesService = messagesService;
+  }
+
   @Autowired
   private MessagesRepository messagesRepository;
 
@@ -58,37 +66,37 @@ public class MessagesController {
       @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
   public ResponseEntity<MessageResponse> createMessage(@RequestBody MessageRequest messageRequest, Authentication authentication) {
-  
       // Vérifie si l'utilisateur est authentifié
       if (authentication == null || !authentication.isAuthenticated()) {
-        throw new UnauthorizedException("Unauthorized");
+          throw new UnauthorizedException("Unauthorized");
       }
   
       // Vérifie si le rental existe
       Optional<Rentals> optionalRental = rentalsRepository.findById(messageRequest.getRental_id());
       if (optionalRental.isEmpty()) {
-        throw new NotFoundException("Rental not found");
+          throw new NotFoundException("Rental not found");
       }
   
-      // Crée un nouvel objet Messages
-      Messages newMessage = new Messages();
-      newMessage.setRental_id(messageRequest.getRental_id());
       // Récupère l'ID de l'utilisateur authentifié
       String email = authentication.getName();
       User user = userRepository.findByEmail(email);
       Integer userId = user.getId();
+  
+      // Crée un nouvel objet Messages avec les valeurs du DTO
+      Messages newMessage = new Messages();
+      newMessage.setRental_id(messageRequest.getRental_id());
       newMessage.setUser_id(userId);
       newMessage.setMessage(messageRequest.getMessage());
       Timestamp now = Timestamp.from(Instant.now());
       newMessage.setCreated_at(now);
       newMessage.setUpdated_at(now);
   
-      // Sauvegarde le message dans la base de données
-      messagesRepository.save(newMessage);
+      // Enregistre le message dans la base de données
+      Messages savedMessage = messagesRepository.save(newMessage);
   
       // Crée un objet MessageResponse avec le message approprié
-      MessageResponse messageResponse = new MessageResponse("Message send with success");
-
+      MessageResponse messageResponse = new MessageResponse("Message sent with success");
+  
       // Retourne l'objet MessageResponse dans la réponse
       return ResponseEntity.ok(messageResponse);
   }

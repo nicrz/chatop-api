@@ -1,9 +1,9 @@
-package com.openclassrooms.chatop.model;
+package com.openclassrooms.chatop.responses;
 
-public class MessageResponse {
+public class RentalResponse {
     private String message;
 
-    public MessageResponse(String message) {
+    public RentalResponse(String message) {
         this.message = message;
     }
 

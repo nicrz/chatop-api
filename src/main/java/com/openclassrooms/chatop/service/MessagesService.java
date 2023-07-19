@@ -23,4 +23,9 @@ public class MessagesService {
         return messagesRepository.findById(id);
     }
 
+    @Transactional
+    public Messages createMessage(Messages message) {
+        return messagesRepository.save(message);
+    }
+
 }

@@ -1,4 +1,4 @@
-package com.openclassrooms.chatop.model;
+package com.openclassrooms.chatop.responses;
 
 import java.util.List;
 

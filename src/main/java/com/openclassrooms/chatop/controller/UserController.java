@@ -1,11 +1,11 @@
 package com.openclassrooms.chatop.controller;
 
-import com.openclassrooms.chatop.model.AuthSuccess;
-import com.openclassrooms.chatop.model.LoginRequest;
-import com.openclassrooms.chatop.model.RegistrationRequest;
 import com.openclassrooms.chatop.model.User;
 import com.openclassrooms.chatop.repository.UserRepository;
+import com.openclassrooms.chatop.responses.AuthSuccess;
 import com.openclassrooms.chatop.service.UserService;
+import com.openclassrooms.dto.LoginRequest;
+import com.openclassrooms.dto.RegistrationRequest;
 import com.openclassrooms.chatop.security.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -38,6 +38,13 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 @Controller 
 @RequestMapping(path="/") 
 public class UserController {
+
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
   @Autowired
   private UserRepository userRepository;
   
@@ -57,41 +64,29 @@ public class UserController {
       @ApiResponse(responseCode = "400", description = "Invalid request")
   })
   public ResponseEntity<AuthSuccess> addNewUser(@RequestBody RegistrationRequest registrationRequest) {
-      try {
-          // Récupère les paramètres de la demande d'inscription
-          String name = registrationRequest.getName();
-          String email = registrationRequest.getEmail();
-          String password = registrationRequest.getPassword();
-          
-          // Crée un nouvel utilisateur
-          User user = new User();
-          user.setName(name);
-          user.setEmail(email);
-          user.setPassword(passwordEncoder.encode(password));
-          Timestamp now = Timestamp.from(Instant.now());
-          user.setCreated_at(now);
-          user.setUpdated_at(now);
-          userRepository.save(user);
-  
-          // Authentifie l'utilisateur après son enregistrement
-          Authentication authentication = authenticationProvider.authenticate(
-              new UsernamePasswordAuthenticationToken(email, password)
-          );
-          SecurityContextHolder.getContext().setAuthentication(authentication);
-  
-          // Génère le token JWT
-          String token = jwtTokenProvider.generateToken(authentication);
-  
-          // Création de l'objet AuthSuccess avec le token
-          AuthSuccess authSuccess = new AuthSuccess(token);
+    try {
+        // Appelle la méthode du service pour ajouter un nouvel utilisateur
+        User newUser = userService.addNewUser(registrationRequest);
 
-          // Retourne l'objet AuthSuccess dans la réponse
-          return ResponseEntity.ok(authSuccess);
-      } catch (Exception e) {
-          // Retourne une réponse 400 s'il y a une erreur lors de l'ajout
-          return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-      }
-  }
+        // Authentifie l'utilisateur après son enregistrement
+        Authentication authentication = authenticationProvider.authenticate(
+            new UsernamePasswordAuthenticationToken(newUser.getEmail(), registrationRequest.getPassword())
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Génère le token JWT
+        String token = jwtTokenProvider.generateToken(authentication);
+
+        // Crée l'objet AuthSuccess avec le token
+        AuthSuccess authSuccess = new AuthSuccess(token);
+
+        // Retourne l'objet AuthSuccess dans la réponse
+        return ResponseEntity.ok(authSuccess);
+    } catch (Exception e) {
+        // Retourne une réponse 400 s'il y a une erreur lors de l'ajout
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+}
   
 
   @PostMapping("/auth/login")
@@ -101,28 +96,26 @@ public class UserController {
       @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
   public ResponseEntity<AuthSuccess> login(@RequestBody LoginRequest loginRequest) {
-      try {
-          String email = loginRequest.getEmail();
-          String password = loginRequest.getPassword();
-  
-          // Vérification des informations d'identification de l'utilisateur
-          Authentication authentication = authenticationProvider.authenticate(
-                  new UsernamePasswordAuthenticationToken(email, password)
-          );
-  
-          // Génération du token
-          String token = jwtTokenProvider.generateToken(authentication);
-  
-        // Création de l'objet AuthSuccess avec le token
+    try {
+        String email = loginRequest.getEmail();
+        String password = loginRequest.getPassword();
+
+        // Appelle la méthode du service pour vérifier les informations d'identification
+        Authentication authentication = userService.login(email, password);
+
+        // Génère le token JWT
+        String token = jwtTokenProvider.generateToken(authentication);
+
+        // Crée l'objet AuthSuccess avec le token
         AuthSuccess authSuccess = new AuthSuccess(token);
 
         // Retourne l'objet AuthSuccess dans la réponse
         return ResponseEntity.ok(authSuccess);
-      } catch (AuthenticationException e) {
-          // Retourne une réponse 401 Unauthorized en cas d'erreur
-          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-      }
-  }
+    } catch (AuthenticationException e) {
+        // Retourne une réponse 401 Unauthorized en cas d'erreur
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+}
 
   @GetMapping("/auth/me")
   @Operation(summary = "Return informations about logged user")
@@ -131,25 +124,25 @@ public class UserController {
     @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
   public ResponseEntity<User> getUserInfo() {
-      // Récupère l'objet Authentication
-      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-  
-      if (authentication != null) {
-          // Récupère l'identifiant' de l'objet Authentication
-          String email = authentication.getName();
-  
-          // Recherche l'utilisateur par son e-mail
-          User user = userRepository.findByEmail(email);
-  
-          if (user != null) {
-              // Renvoie les informations de l'utilisateur dans la réponse
-              return ResponseEntity.ok(user);
-          }
-      }
-  
-      // Renvoie une erreur 401 Unauthorized si l'authentification n'est pas fournie
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-  }
+    // Récupère l'objet Authentication
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+    if (authentication != null) {
+        // Récupère l'identifiant de l'objet Authentication
+        String email = authentication.getName();
+
+        // Appelle la méthode du service pour récupérer les informations de l'utilisateur
+        User user = userService.getUserByEmail(email);
+
+        if (user != null) {
+            // Renvoie les informations de l'utilisateur dans la réponse
+            return ResponseEntity.ok(user);
+        }
+    }
+
+    // Renvoie une erreur 401 Unauthorized si l'authentification n'est pas fournie
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+}
 
   @GetMapping("/user/{id}")
   @Operation(summary = "Get user informations by ID")
@@ -163,7 +156,7 @@ public class UserController {
   
       if (authentication != null && authentication.isAuthenticated()) {
           // Recherche l'utilisateur par son ID
-          Optional<User> optionalUser = userRepository.findById(id);
+          Optional<User> optionalUser = userService.getUserById(id);
   
           if (optionalUser.isPresent()) {
               // Si l'utilisateur existe, on renvoie les informations de l'utilisateur dans la réponse
@@ -175,9 +168,5 @@ public class UserController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
-  @GetMapping(path="/all")
-  public @ResponseBody Iterable<User> getAllUsers() {
-    // Retourne la liste de tous les utilisateurs enregistrés
-    return userRepository.findAll();
-  }
+
 }

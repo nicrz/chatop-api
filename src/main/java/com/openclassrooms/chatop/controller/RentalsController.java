@@ -1,12 +1,13 @@
 package com.openclassrooms.chatop.controller;
 
-import com.openclassrooms.chatop.model.RentalResponse;
 import com.openclassrooms.chatop.model.Rentals;
-import com.openclassrooms.chatop.model.RentalsResponse;
 import com.openclassrooms.chatop.model.User;
 import com.openclassrooms.chatop.repository.RentalsRepository;
 import com.openclassrooms.chatop.repository.UserRepository;
+import com.openclassrooms.chatop.responses.RentalResponse;
+import com.openclassrooms.chatop.responses.RentalsResponse;
 import com.openclassrooms.chatop.service.RentalsService;
+import com.openclassrooms.dto.RentalRequest;
 
 import org.springframework.beans.factory.annotation.Value;
 
@@ -44,11 +45,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @Controller 
 @RequestMapping(path="/") 
 public class RentalsController {
+
+  private final RentalsService rentalsService;
+
+  public RentalsController(RentalsService rentalsService) {
+      this.rentalsService = rentalsService;
+  }
+
   @Autowired
   private RentalsRepository rentalsRepository;
 
@@ -72,7 +81,7 @@ public class RentalsController {
     }
 
     // Récupère toutes les locations
-    Iterable<Rentals> rentalsIterable = rentalsRepository.findAll();
+    Iterable<Rentals> rentalsIterable = rentalsService.getAllRentals();
 
     // Convertit l'itérable en liste
     List<Rentals> rentalsList = new ArrayList<>();
@@ -98,7 +107,7 @@ public class RentalsController {
     }
 
     // Récup la location par son ID
-    Optional<Rentals> rental = rentalsRepository.findById(id);
+    Optional<Rentals> rental = rentalsService.getRentalById(id);
 
     if (rental.isPresent()) {
         return rental;
@@ -113,56 +122,22 @@ public class RentalsController {
       @ApiResponse(responseCode = "200", description = "Rental created !"),
       @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
-  public @ResponseBody ResponseEntity<RentalResponse> createRental(@RequestParam String name,
-                                        @RequestParam Integer surface,
-                                        @RequestParam Integer price,
-                                        @RequestParam MultipartFile picture,
-                                        @RequestParam String description,
-                                        Authentication authentication) {
+  public ResponseEntity<RentalResponse> createRental(@RequestBody RentalRequest rentalRequest, Authentication authentication) {
       // Vérifie si l'utilisateur est authentifié
       if (authentication == null || !authentication.isAuthenticated()) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
       }
+
+      MultipartFile picture = rentalRequest.getPicture();
   
       if (picture != null && !picture.isEmpty()) {
           try {
-              // Définit le dossier où le fichier sera stocké
-              String fileDirectory = System.getProperty("user.dir") + "/src/main/resources/static/images/";
+               // Enregistre la location
+              rentalsService.createRental(rentalRequest, picture, authentication);
 
-              // Crée le chemin d'accès complet pour le fichier
-              String fileName = picture.getOriginalFilename();
-              Path destination = Paths.get(fileDirectory + fileName);
+              RentalResponse rentalResponse = new RentalResponse("Rental created!");
 
-              // Copie le fichier vers le répertoire de destination
-              Files.copy(picture.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
-
-              // Génère l'URL complet pour accéder au fichier
-              String fileUrl = "http://localhost:3000/images/" + fileName;
-  
-              // Crée un nouvel objet Rentals avec les autres propriétés
-              Rentals newRental = new Rentals();
-              newRental.setName(name);
-              newRental.setSurface(surface);
-              newRental.setPrice(price);
-              newRental.setPicture(fileUrl);
-              newRental.setDescription(description);
-  
-              // Récup l'ID de l'utilisateur authentifié
-              String email = authentication.getName();
-              User user = userRepository.findByEmail(email);
-              Integer owner_id = user.getId();
-              newRental.setOwner_id(owner_id);
-              newRental.setCreated_at(new Timestamp(System.currentTimeMillis()));
-              newRental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
-  
-              // Enregistre l'objet Rentals dans la base de données
-              rentalsRepository.save(newRental);
-  
-             // Crée un objet RentalResponse avec le message approprié
-             RentalResponse rentalResponse = new RentalResponse("Rental created !");
-
-             // Retourne l'objet RentalResponse dans la réponse
-             return ResponseEntity.ok(rentalResponse);
+              return ResponseEntity.ok(rentalResponse);
           } catch (IOException e) {
               // Gère l'erreur de téléchargement du fichier
               e.printStackTrace();
@@ -180,18 +155,15 @@ public class RentalsController {
       @ApiResponse(responseCode = "401", description = "Unauthorized")
   })
   public ResponseEntity<RentalResponse> updateRental(@PathVariable Integer id,
-                                            @RequestParam(required = false) String name,
-                                            @RequestParam(required = false) Integer surface,
-                                            @RequestParam(required = false) Integer price,
-                                            @RequestParam(required = false) String description,
-                                            Authentication authentication) {
+                                          @RequestBody RentalRequest rentalRequest,
+                                          Authentication authentication) {
       // Vérifie si l'utilisateur est authentifié
       if (authentication == null || !authentication.isAuthenticated()) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
       }
   
       // Vérifie si la location existe
-      Optional<Rentals> rentalOptional = rentalsRepository.findById(id);
+      Optional<Rentals> rentalOptional = rentalsService.getRentalById(id);
       if (rentalOptional.isEmpty()) {
           return ResponseEntity.notFound().build();
       }
@@ -209,31 +181,32 @@ public class RentalsController {
       }
   
       // Met à jour les champs modifiables de la location
-      if (name != null) {
-          rental.setName(name);
+      if (rentalRequest.getName() != null) {
+          rental.setName(rentalRequest.getName());
       }
-      if (surface != null) {
-          rental.setSurface(surface);
+      if (rentalRequest.getSurface() != null) {
+          rental.setSurface(rentalRequest.getSurface());
       }
-      if (price != null) {
-          rental.setPrice(price);
+      if (rentalRequest.getPrice() != null) {
+          rental.setPrice(rentalRequest.getPrice());
       }
-      if (description != null) {
-          rental.setDescription(description);
+      if (rentalRequest.getDescription() != null) {
+          rental.setDescription(rentalRequest.getDescription());
       }
   
-      // Modif la date de mise à jour
+      // Modifie la date de mise à jour
       Timestamp now = Timestamp.from(Instant.now());
       rental.setUpdated_at(now);
   
       // Enregistre les modifications
-      rentalsRepository.save(rental);
+      rentalsService.saveRental(rental);
   
-     // Crée un objet RentalResponse avec le message approprié
-     RentalResponse rentalResponse = new RentalResponse("Rental updated !");
-
-     // Retourne l'objet RentalResponse dans la réponse
-     return ResponseEntity.ok(rentalResponse);
+      // Crée un objet RentalResponse avec le message approprié
+      RentalResponse rentalResponse = new RentalResponse("Rental updated !");
+  
+      // Retourne l'objet RentalResponse dans la réponse
+      return ResponseEntity.ok(rentalResponse);
   }
+  
 
 }

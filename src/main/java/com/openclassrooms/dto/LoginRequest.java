@@ -1,22 +1,12 @@
-package com.openclassrooms.chatop.model;
+package com.openclassrooms.dto;
 
-public class RegistrationRequest {
-    private String name;
+public class LoginRequest {
     private String email;
     private String password;
 
-    public RegistrationRequest(String name, String email, String password) {
-        this.name = name;
+    public LoginRequest(String email, String password) {
         this.email = email;
         this.password = password;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public String getEmail() {
