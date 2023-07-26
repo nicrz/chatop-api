@@ -2,6 +2,7 @@ package com.openclassrooms.chatop.security;
 
 import com.openclassrooms.chatop.service.UserService;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.reactive.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -23,11 +24,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @ComponentScan
 public class SecurityConfig {
 
+    @Autowired
+    private AuthEntryPointJwt authEntryPointJwt;
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthentication jwtAuthentication, AuthenticationProvider authenticationProvider) throws Exception{
         http
                 .csrf()
                 .disable()
+                .exceptionHandling().authenticationEntryPoint(authEntryPointJwt).and()
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/auth/register").permitAll()
                         .requestMatchers("/auth/login").permitAll()

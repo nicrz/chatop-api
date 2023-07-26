@@ -11,6 +11,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 
 @Component
 public class JwtAuthentication extends OncePerRequestFilter {
@@ -30,11 +33,30 @@ public class JwtAuthentication extends OncePerRequestFilter {
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
             System.out.println(token);
-            Authentication authentication = jwtTokenProvider.getAuthentication(token);
 
-            if (authentication != null) {
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
+
+
+            String username = jwtTokenProvider.getUsernameFromToken(token);
+
+            UserDetails userDetails = userService.loadUserByUsername(username);
+            UsernamePasswordAuthenticationToken authentication =
+              new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities());
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+    
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+
+
+
+
+            //Authentication authentication = jwtTokenProvider.getAuthentication(token);
+
+            //if (authentication != null) {
+              //  SecurityContextHolder.getContext().setAuthentication(authentication);
+            //}
         }
 
         try {

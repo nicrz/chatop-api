@@ -117,12 +117,12 @@ public class UserController {
     }
 }
 
-  @GetMapping("/auth/me")
-  @Operation(summary = "Return informations about logged user")
-  @ApiResponses(value = {
+@GetMapping("/auth/me")
+@Operation(summary = "Return information about the logged user")
+@ApiResponses(value = {
     @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class))),
     @ApiResponse(responseCode = "401", description = "Unauthorized")
-  })
+})
   public ResponseEntity<User> getUserInfo() {
     // Récupère l'objet Authentication
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -144,12 +144,13 @@ public class UserController {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 }
 
-  @GetMapping("/user/{id}")
-  @Operation(summary = "Get user informations by ID")
-  @ApiResponses(value = {
+@GetMapping("/user/{id}")
+@Operation(summary = "Get user information by ID")
+@ApiResponses(value = {
     @ApiResponse(responseCode = "200", description = "Success", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class))),
-    @ApiResponse(responseCode = "401", description = "Unauthorized")
-  })
+    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+    @ApiResponse(responseCode = "404", description = "User not found")
+})
   public ResponseEntity<User> getUserById(@PathVariable Integer id) {
       // Récupère l'objet Authentication
       Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
