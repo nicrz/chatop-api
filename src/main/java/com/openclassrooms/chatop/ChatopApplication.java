@@ -1,12 +1,11 @@
 package com.openclassrooms.chatop;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import springfox.documentation.swagger2.annotations.EnableSwagger2;
-
+@SecurityRequirement(name = "bearerAuth")
 @SpringBootApplication
-
 public class ChatopApplication {
 
 	public static void main(String[] args) {
@@ -14,3 +13,5 @@ public class ChatopApplication {
 	}
 
 }
+
+

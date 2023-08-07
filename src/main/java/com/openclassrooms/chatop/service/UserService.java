@@ -1,27 +1,24 @@
 package com.openclassrooms.chatop.service;
 
-import java.util.ArrayList;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import com.openclassrooms.chatop.model.User;
+import com.openclassrooms.chatop.repository.UserRepository;
 import com.openclassrooms.dto.RegistrationRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import java.sql.Timestamp;
-import java.time.Instant;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Optional;
-
-import com.openclassrooms.chatop.repository.UserRepository;
-
-import lombok.RequiredArgsConstructor;
-
-import com.openclassrooms.chatop.model.User;
 
 @Service
 @RequiredArgsConstructor
@@ -38,12 +35,10 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email); 
-
+        User user = userRepository.findByEmail(email);
         if (user == null) {
             throw new UsernameNotFoundException("Utilisateur non trouvé : " + email);
         }
-
         return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(), new ArrayList<>());
     }
 

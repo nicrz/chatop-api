@@ -5,20 +5,18 @@ import com.openclassrooms.chatop.model.User;
 import com.openclassrooms.chatop.repository.RentalsRepository;
 import com.openclassrooms.chatop.repository.UserRepository;
 import com.openclassrooms.dto.RentalRequest;
-
-import java.io.File;
-import java.util.Optional;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.sql.Timestamp;
-import java.io.IOException;
-
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.sql.Timestamp;
+import java.util.Optional;
 
 
 @Service
@@ -48,7 +46,7 @@ public class RentalsService {
     }
 
     @Transactional
-    public Rentals createRental(RentalRequest rentalRequest, MultipartFile picture, Authentication authentication) throws IOException {
+    public Rentals createRental(RentalRequest rentalRequest, MultipartFile picture) throws IOException {
         // Définit le dossier où le fichier sera stocké
         String fileDirectory = System.getProperty("user.dir") + "/src/main/resources/static/images/";
 
@@ -70,7 +68,8 @@ public class RentalsService {
         newRental.setPrice(rentalRequest.getPrice());
         newRental.setPicture(fileUrl);
         newRental.setDescription(rentalRequest.getDescription());
-  
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // Récup l'ID de l'utilisateur authentifié
         String email = authentication.getName();
         User user = userRepository.findByEmail(email);

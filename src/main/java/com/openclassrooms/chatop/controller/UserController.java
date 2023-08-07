@@ -1,24 +1,24 @@
 package com.openclassrooms.chatop.controller;
 
 import com.openclassrooms.chatop.model.User;
-import com.openclassrooms.chatop.repository.UserRepository;
 import com.openclassrooms.chatop.responses.AuthSuccess;
+import com.openclassrooms.chatop.security.JwtTokenProvider;
 import com.openclassrooms.chatop.service.UserService;
 import com.openclassrooms.dto.LoginRequest;
 import com.openclassrooms.dto.RegistrationRequest;
-import com.openclassrooms.chatop.security.JwtTokenProvider;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.http.HttpStatus;
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.Optional;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,17 +26,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
-@Controller 
-@RequestMapping(path="/") 
+import java.util.Optional;
+
+@Controller
+@RequestMapping(path = "/")
+@SecurityRequirement(name = "bearerAuth")
 public class UserController {
 
     private final UserService userService;
@@ -45,17 +40,12 @@ public class UserController {
         this.userService = userService;
     }
 
-  @Autowired
-  private UserRepository userRepository;
-  
-  @Autowired
+
+    @Autowired
   private AuthenticationProvider authenticationProvider;
   
   @Autowired
   private JwtTokenProvider jwtTokenProvider;
-  
-  @Autowired
-  private PasswordEncoder passwordEncoder;
 
   @PostMapping(path = "/auth/register")
   @Operation(summary = "User registration")
@@ -164,7 +154,6 @@ public class UserController {
               return ResponseEntity.ok(optionalUser.get());
           }
       }
-  
       // Renvoie une réponse 401 Unauthorized si l'authentificaton n'est pas fournie
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
